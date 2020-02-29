@@ -18,7 +18,7 @@ library("sigmoid")
 
 #Generate missing completely at random
 gen_mcar <- function(x, n_missing){
-  #pick random sells and set NA
+  #draw a random sample and set NA
   x[sample(nrow(x)*ncol(x), n_missing)] = NA
   
   return(x)
@@ -26,12 +26,14 @@ gen_mcar <- function(x, n_missing){
 
 #Generate missing at random
 gen_mar <- function(x, n_missing){
-  #shift columns by one to make missing depend on size of left neighbour
-  
+  #shift columns by one to make missing depend on size of right neighbour
+  shifted = x[,c(2:ncol(x),1)]
   
   #construct a probabilty for NA matrix based on the scaled size (larger is higher prob)
-  probs = sigmoid(x)
+  probs = sigmoid(shifted)
   probs[is.na(probs)] = 0
+  
+  #draw a random sample based on probabilites and set NA
   x[sample(nrow(x)*ncol(x), n_missing, prob=probs)] = NA
   
   return(x)
@@ -42,6 +44,8 @@ gen_mnar <- function(x, n_missing){
   #construct a probabilty for NA matrix based on the scaled size (larger is higher prob)
   probs = sigmoid(x)
   probs[is.na(probs)] = 0
+  
+  #draw a random sample based on probabilites and set NA
   x[sample(nrow(x)*ncol(x), n_missing, prob=probs)] = NA
   
   return(x)
@@ -76,10 +80,10 @@ gen_data <- function(n_obs, x_cov, mcar = 0, mar = 0, mnar = 0, outliers = 0, n_
   xy = lapply(xy, matrix, ncol=n_col)
 }
 
-set.seed(123)
+#set.seed(123)
 n_x = 2
 m = 1
 x_cov = genPositiveDefMat("unifcorrmat",dim=n_x, rangeVar =c(0,0.5))$Sigma
 diag(x_cov)= 1 
-data = gen_data(n_obs = 5, x_cov, mcar = 0, mar=0,mnar=0.2, n_sets=m)
+data = gen_data(n_obs = 5, x_cov, mcar = 0.3, mar=0.3, mnar=0.3, n_sets=m)
 print(data)
