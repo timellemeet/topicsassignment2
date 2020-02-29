@@ -37,12 +37,19 @@
 # m         the number of imputations
 # any other information you want to keep
 
-multimp <- function(xy, m, DDC = FALSE, ...) {
+multimp <- function(xy, m = 10, DDC = FALSE, ...) {
   # You should set a sensible default for the number of imputations m.
   #
   # You can use function DDC() from package cellWise, as well as function 
   # irmi() from package VIM for imputations.
+  
+  return(xy)
+  
 }
+
+source("Simulation.R")
+print(multimp(xy,10))
+
 
 
 # Fit regression models
