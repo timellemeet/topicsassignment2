@@ -8,6 +8,7 @@
 ## code together with your report.
 library("mvtnorm")
 library("clusterGeneration")
+library("sigmoid")
 
 # Load R script with your implementation of the methods
 #source("Imputation.R")
@@ -17,19 +18,33 @@ library("clusterGeneration")
 
 #Generate missing completely at random
 gen_mcar <- function(x, n_missing){
-  x[sample(nrow(x)*ncol(x), n_missing)] <- NA
+  #pick random sells and set NA
+  x[sample(nrow(x)*ncol(x), n_missing)] = NA
   
   return(x)
 }
 
 #Generate missing at random
 gen_mar <- function(x, n_missing){
-  x
+  #shift columns by one to make missing depend on size of left neighbour
+  
+  
+  #construct a probabilty for NA matrix based on the scaled size (larger is higher prob)
+  probs = sigmoid(x)
+  probs[is.na(probs)] = 0
+  x[sample(nrow(x)*ncol(x), n_missing, prob=probs)] = NA
+  
+  return(x)
 }
 
 #Generate missing not at random
 gen_mnar <- function(x, n_missing){
-  x
+  #construct a probabilty for NA matrix based on the scaled size (larger is higher prob)
+  probs = sigmoid(x)
+  probs[is.na(probs)] = 0
+  x[sample(nrow(x)*ncol(x), n_missing, prob=probs)] = NA
+  
+  return(x)
 }
 
 #Transform cells to outliers
@@ -49,19 +64,22 @@ gen_data <- function(n_obs, x_cov, mcar = 0, mar = 0, mnar = 0, outliers = 0, n_
   
   
   #Alter data
-  total_cells = n_obs * (1+length(diag(x_cov)))
+  n_col = 1+length(diag(x_cov))
+  total_cells = n_obs * n_col
   xy = gen_mcar(xy, round(total_cells*mcar))
   xy = gen_mar(xy, round(total_cells*mar))
   xy = gen_mnar(xy, round(total_cells*mnar))
   xy = gen_outliers(xy, round(total_cells*outliers))
   
   #split return list of datasets 
-  split(xy, rep(1:n_sets, each = n_obs))
+  xy = split(xy, rep(1:n_sets, each = n_obs))
+  xy = lapply(xy, matrix, ncol=n_col)
 }
 
-#set.seed(123)
+set.seed(123)
 n_x = 2
+m = 1
 x_cov = genPositiveDefMat("unifcorrmat",dim=n_x, rangeVar =c(0,0.5))$Sigma
 diag(x_cov)= 1 
-data = gen_data(n_obs = 10, x_cov, mcar = 0, mar=0.1, n_sets=1)
+data = gen_data(n_obs = 5, x_cov, mcar = 0, mar=0,mnar=0.2, n_sets=m)
 print(data)
