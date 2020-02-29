@@ -100,7 +100,13 @@ gen_data <- function(n_obs, x_cov, mcar = 0, mar = 0, mnar = 0, outliers = 0, n_
 }
 
 #set.seed(123)
-m = 1
-x_cov = gen_x_cov(n_x=2, max_cov=0.5)
-data = gen_data(n_obs = 10, x_cov, mcar = 0.2, mar=0.2, mnar=0.2, outliers=0.2, n_sets=m)
-print(data)
+#m = 100
+#x_cov = gen_x_cov(n_x=3, max_cov=0.5)
+#data = gen_data(n_obs = 200, x_cov, mcar =0., mar=0.2, mnar=0.2, outliers=0.2, n_sets=m)
+
+
+#noise 
+#noise.factor
+#force
+#init method median
+

@@ -16,6 +16,10 @@
 
 
 
+library("VIM")
+library("doParallel")  
+no_cores <- detectCores() - 1  
+
 ## Functions for multiple imputation via iterative model-based imputation
 
 
@@ -37,18 +41,36 @@
 # m         the number of imputations
 # any other information you want to keep
 
-multimp <- function(xy, m = 10, DDC = FALSE, ...) {
+
+
+multimp <- function(xy, m = 20, DDC = FALSE, ...) {
   # You should set a sensible default for the number of imputations m.
   #
   # You can use function DDC() from package cellWise, as well as function 
   # irmi() from package VIM for imputations.
+
+  #filter out full nan rows
+  n_col = ncol(xy)
+  xy = xy[apply(xy, 1, function(x) !all(is.na(x)))]
+  xy = matrix(xy, ncol = n_col)
+
+  #define cluster for parrel imputation
+  cl <- makeCluster(no_cores)
+  registerDoParallel(cl)
+
   
-  return(xy)
-  
+  #generate m imputed datasets
+  imputed <- foreach(i = 1:m, .packages='VIM') %dopar% {
+    #irmi options are set in simulation study for flexiblity!
+    return(irmi(xy,...))
+  }
+
+  # free up processes
+  stopCluster(cl)
+ 
+  return(list(imputed,m,irmi=list(...)))
 }
 
-source("Simulation.R")
-print(multimp(xy,10))
 
 
 
@@ -120,3 +142,17 @@ bootstrap <- function(x, R, k, DDC = FALSE, ...) {
   # package VIM for imputations, and function lmrob() from package robustbase 
   # for the MM-estimator.
 }
+
+
+source("Simulation.R")
+set.seed(123)
+m = 1
+x_cov = gen_x_cov(n_x=3, max_cov=0.5)
+xy = gen_data(n_obs = 10, x_cov, mcar =0.4, mar=0, mnar=0, outliers=0, n_sets=m)
+xy = xy[[1]]
+start_time <- Sys.time()
+mi = multimp(xy,m=10, imp_var = FALSE)
+end_time <- Sys.time()
+print(mi)
+print(end_time - start_time)
+
