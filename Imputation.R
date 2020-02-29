@@ -52,7 +52,7 @@ multimp <- function(xy, m = 20, DDC = FALSE, ...) {
 
   if(DDC){
     #find possible outliers
-    outliers = DDC(xy)$indall
+    outliers = DDC(xy, DDCpars = list(silent=TRUE))$indall
     
     #set outliers NA
     xy[outliers] = NA
@@ -60,26 +60,29 @@ multimp <- function(xy, m = 20, DDC = FALSE, ...) {
   
   imputed = xy
   
-  # #filter out full nan rows
-  # n_col = ncol(xy)
-  # xy = xy[apply(xy, 1, function(x) !all(is.na(x)))]
-  # xy = matrix(xy, ncol = n_col)
-  # 
-  # #define cluster for parrel imputation
-  # cl <- makeCluster(no_cores)
-  # registerDoParallel(cl)
-  # 
-  # 
-  # #generate m imputed datasets
-  # imputed <- foreach(i = 1:m, .packages='VIM') %dopar% {
-  #   #irmi options are set in simulation study for flexiblity!
-  #   return(irmi(xy,...))
-  # }
-  # 
-  # # free up processes
-  # stopCluster(cl)
-  # 
-  return(list(imputed,m,irmi=list(...)))
+  #filter out full nan rows
+  n_col = ncol(xy)
+  xy = xy[apply(xy, 1, function(x) !all(is.na(x)))]
+  xy = matrix(xy, ncol = n_col)
+
+  #define cluster for parrel imputation
+  cl <- makeCluster(no_cores)
+  registerDoParallel(cl)
+
+
+  #generate m imputed datasets
+  imputed <- foreach(i = 1:m, .packages='VIM') %dopar% {
+    #irmi options are set in simulation study for flexiblity!
+    return(irmi(xy,...))
+  }
+
+  # free up processes
+  stopCluster(cl)
+
+  return(list(
+    imputed = imputed,
+    m=m,
+    irmi=list(...)))
 }
 
 
@@ -162,7 +165,7 @@ x_cov = gen_x_cov(n_x=3, max_cov=0.5)
 xy = gen_data(n_obs = 10, x_cov, mcar =0, mar=0, mnar=0, outliers=0.2, n_sets=m)
 xy = xy[[1]]
 start_time <- Sys.time()
-mi = multimp(xy,m=1, imp_var = FALSE, DDC=TRUE)
+mi = multimp(xy,m=2, imp_var = FALSE, DDC=TRUE)
 end_time <- Sys.time()
 print(mi)
 print(end_time - start_time)
