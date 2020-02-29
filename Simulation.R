@@ -16,6 +16,15 @@ library("sigmoid")
 
 # Put the code for your simulations below here
 
+#generate the covariance matrix of the x variables
+gen_x_cov <- function(n_x=3, max_cov=0.5){
+  x_cov = genPositiveDefMat("unifcorrmat",dim=n_x, rangeVar =c(0,0.5))$Sigma
+  diag(x_cov)= 1 
+  
+  return(x_cov)
+}
+
+
 #Select missing completely at random
 gen_mcar <- function(x, n_missing){
   #draw a random sample and set NA
@@ -34,7 +43,8 @@ gen_mar <- function(x, n_missing){
   probs[is.na(probs)] = 0
   
   #draw a random sample based on probabilites and set NA
-  x[sample(nrow(x)*ncol(x), n_missing, prob=probs)] = NA
+  selection = sample(nrow(x)*ncol(x), n_missing, prob=probs)
+  x[selection] = NA
   
   return(x)
 }
@@ -46,7 +56,8 @@ gen_mnar <- function(x, n_missing){
   probs[is.na(probs)] = 0
   
   #draw a random sample based on probabilites and set NA
-  x[sample(nrow(x)*ncol(x), n_missing, prob=probs)] = NA
+  selection = sample(nrow(x)*ncol(x), n_missing, prob=probs)
+  x[selection] = NA
   
   return(x)
 }
@@ -59,8 +70,6 @@ gen_outliers <- function(x, n_outliers){
   
   #select cells to make outliers
   selection = sample(nrow(x)*ncol(x), n_outliers, prob=!is.na(x))
-  
-  #overwrite with outliers
   x[selection] = outliers
   
   return(x)
@@ -91,9 +100,7 @@ gen_data <- function(n_obs, x_cov, mcar = 0, mar = 0, mnar = 0, outliers = 0, n_
 }
 
 #set.seed(123)
-n_x = 1
 m = 1
-x_cov = genPositiveDefMat("unifcorrmat",dim=n_x, rangeVar =c(0,0.5))$Sigma
-diag(x_cov)= 1 
-data = gen_data(n_obs = 5, x_cov, mcar = 0.4, mar=0, mnar=0, outliers=0.5, n_sets=m)
+x_cov = gen_x_cov(n_x=2, max_cov=0.5)
+data = gen_data(n_obs = 10, x_cov, mcar = 0.2, mar=0.2, mnar=0.2, outliers=0.2, n_sets=m)
 print(data)
