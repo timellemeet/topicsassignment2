@@ -197,27 +197,73 @@ pool <- function(fitList, ...) {
 #              the z-statistic in the third column, and the p-value in the 
 #              fourth column (see slide 29 of Lecture 5 for an example)
 
-bootstrap <- function(x, R, k, DDC = FALSE, ...) {
+bootstrap <- function(x, R=100, k=5, DDC = FALSE, ...) {
   # You should set a sensible default for the number of bootstrap replicates R 
   # and the number of neighbors k.
   #
   # You can use function DDC() from package cellWise, function kNN() from 
   # package VIM for imputations, and function lmrob() from package robustbase 
   # for the MM-estimator.
+  
+  if(DDC){
+    #find possible outliers
+    outliers = DDC(x, DDCpars = list(silent=TRUE))$indall
+    
+    #set outliers NA
+    x[outliers] = NA
+  }
+  
+  #define cluster for parallel imputation	
+  cl <- makeCluster(no_cores)	
+  registerDoParallel(cl)
+  
+  #perform bootstrap
+  replicates <- foreach(i = 1:R, .packages='VIM') %do% {	
+	  #selection observations for iteration
+    selection = sample(x=nrow(x), size=nrow(x), replace = TRUE)
+	  data = x[selection,]
+	  
+	  #impute nans
+	  data = kNN(as.data.frame(data), k=k, imp_var=FALSE)
+	  
+	  #estimate model
+	  X = as.matrix(data[,-ncol(data)])
+	  y = data[,ncol(data)]
+    model = lmrob(y ~ X, ...)
+    
+	  return(model$coefficients)
+  }
+  
+  # free up processes	
+  stopCluster(cl)
+  
+  #make matrix of replicates
+  matrix(unlist(beta_estimates), ncol = n_coeff, byrow = TRUE)
+  
+  summary=NULL
+  
+  return(list(
+    replicates=replicates,
+    summary=summary
+  ))
+
 }
 
 
 source("Simulation.R")
 set.seed(123)
 x_cov = gen_x_cov(n_x=3, max_cov=0.5)
-xy = gen_data(n_obs = 20, x_cov, mcar = 0.1, mar=0, mnar=0, outliers=0, n_sets=1)[[1]]
+xy = gen_data(n_obs = 40, x_cov, mcar = 0.2, mar=0, mnar=0, outliers=0, n_sets=1)[[1]]
 
 
-mi = multimp(xy,m=10, imp_var = FALSE, DDC=FALSE)
-fit = fit(mi$imputed)
-pool = pool(fit$models)
+# mi = multimp(xy,m=10, imp_var = FALSE, DDC=FALSE)
+# fit = fit(mi$imputed)
+# pool = pool(fit$models)
 
-print(pool)
+#print(xy)
+
+boot = bootstrap(xy, R=1, k=5, DDC = FALSE)
+print(boot)
 # start_time2 <- Sys.time()
 # end_time2 <- Sys.time()
 # print(end_time1 - start_time1)
