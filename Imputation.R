@@ -19,7 +19,7 @@
 library("VIM")
 library("cellWise")  
 library("robustbase")
-library("doParallel")  
+library("doParallel") #for parallel
 no_cores <- detectCores() - 1  
 
 ## Functions for multiple imputation via iterative model-based imputation
@@ -134,15 +134,28 @@ pool <- function(fitList, ...) {
   summary = matrix(0L, nrow = n_coeff, ncol=5)
   rownames(summary) = row_names
   colnames(summary) = c("Estimate", "Std. Error", "t value", "df", "Pr(>|t|)")
-  print(m)
   
-  #retrieve information from models
-  pooled_estimate = lapply(fitList, function(x) x$coefficients)
-  pooled_estimate = matrix(unlist(pooled_estimate), ncol = n_coeff, byrow = TRUE)
-  pooled_estimate = colMeans(pooled_estimate)
+  #pooled estimates
+  beta_estimates = lapply(fitList, function(x) x$coefficients)
+  beta_estimates = matrix(unlist(beta_estimates), ncol = n_coeff, byrow = TRUE)
+  pooled_estimate = colMeans(beta_estimates)
   summary[,1] = pooled_estimate
   
-  print
+  #pooled variance 
+  between = sweep(beta_estimates,2,pooled_estimate)^2 #(T - mean(T))^2
+  between = (m+1) / (m-1)  * colMeans(between)  # m+1/m B*
+  
+  
+  within = lapply(fitList, function(x) summary(x)$coefficients[,2])
+  within = matrix(unlist(within), ncol = n_coeff, byrow = TRUE) ^2 #Ur*
+  within = colMeans(within)
+  
+  pooled_variance = between + within
+  summary[,2] = pooled_variance
+  
+  #t statistic
+  summary[,3] = pooled_estimate / sqrt(pooled_variance)
+  
   coeff = NULL
   return(summary)
 }
@@ -187,7 +200,7 @@ x_cov = gen_x_cov(n_x=3, max_cov=0.5)
 xy = gen_data(n_obs = 20, x_cov, mcar = 0.01, mar=0, mnar=0, outliers=0, n_sets=1)[[1]]
 
 
-mi = multimp(xy,m=3, imp_var = FALSE, DDC=FALSE)
+mi = multimp(xy,m=2, imp_var = FALSE, DDC=FALSE)
 fit = fit(mi$imputed)
 pool = pool(fit$models)
 
