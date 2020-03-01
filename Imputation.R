@@ -217,8 +217,8 @@ bootstrap <- function(x, R=100, k=5, DDC = FALSE, ...) {
   cl <- makeCluster(no_cores)	
   registerDoParallel(cl)
   
-  #perform bootstrap
-  replicates <- foreach(i = 1:R, .packages='VIM') %do% {	
+  #perform bootstrap #######
+  replicates <- foreach(i = 1:R, .packages=c("VIM", "robustbase")) %do% {	
 	  #selection observations for iteration
     selection = sample(x=nrow(x), size=nrow(x), replace = TRUE)
 	  data = x[selection,]
@@ -238,9 +238,31 @@ bootstrap <- function(x, R=100, k=5, DDC = FALSE, ...) {
   stopCluster(cl)
   
   #make matrix of replicates
-  matrix(unlist(beta_estimates), ncol = n_coeff, byrow = TRUE)
+  varnames = names(replicates[[1]])
+  replicates = matrix(unlist(replicates), ncol = ncol(x), byrow = TRUE)
+  colnames(replicates) = varnames
   
-  summary=NULL
+  #construct summary table
+  summary = matrix(0L, nrow = length(varnames), ncol=4)
+  rownames(summary) = varnames
+  colnames(summary) = c("Estimate", "Std. Error", "z value", "Pr(>|z|)")
+  
+  print(replicates)
+  
+  #point estimates
+  beta_estimates = colMeans(replicates)
+  summary[,1] = beta_estimates
+  
+  #standard errrors
+  se = sweep(replicates,2,beta_estimates)^2 #(T - mean(T))^2
+  se = colSums(se) / (R-1) # 1/R-1 sum (T - mean(T))^2
+  se = sqrt(se)
+  summary[,2] = se
+  print(se)
+  
+  #z-statistics
+  
+  #p-values
   
   return(list(
     replicates=replicates,
@@ -253,17 +275,23 @@ bootstrap <- function(x, R=100, k=5, DDC = FALSE, ...) {
 source("Simulation.R")
 set.seed(123)
 x_cov = gen_x_cov(n_x=3, max_cov=0.5)
-xy = gen_data(n_obs = 40, x_cov, mcar = 0.2, mar=0, mnar=0, outliers=0, n_sets=1)[[1]]
+xy = gen_data(n_obs = 200, x_cov, mcar = 0.1, mar=0, mnar=0, outliers=0, n_sets=1)[[1]]
 
-
+# 1.249644 mins
 # mi = multimp(xy,m=10, imp_var = FALSE, DDC=FALSE)
 # fit = fit(mi$imputed)
 # pool = pool(fit$models)
 
 #print(xy)
 
-boot = bootstrap(xy, R=1, k=5, DDC = FALSE)
-print(boot)
+start_time <- Sys.time()
+boot = bootstrap(xy, R=5, k=5, DDC = FALSE)
+end_time <- Sys.time()
+print(boot$summary)
+print(end_time - start_time)
+
+
+
 # start_time2 <- Sys.time()
 # end_time2 <- Sys.time()
 # print(end_time1 - start_time1)
