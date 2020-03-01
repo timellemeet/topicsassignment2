@@ -10,12 +10,14 @@ data = data.frame(matrix(ncol = length(columns), nrow = 0))
 #   matrix(rep(x,each=n),nrow=n)
 # }
 
-n_configs = 1
-n_simulations = 1
+n_configs = 13
+n_simulations = 100
 
 #load the configurations
 for(c in 1:n_configs){
   config = results[[c]]
+  
+  if(c<13){
   
   if(length(config$simulation[[1]][[2]])>1){
     n_types = 4
@@ -58,8 +60,24 @@ for(c in 1:n_configs){
       
   }
   
+  } else{
+    #base case
+    temp = data.frame(matrix(ncol = length(columns), nrow = n_simulations))
+    temp[,1] = c
+    temp[,2] = "Base"
+    temp[,3:(2+length(params))] = config[params]
+    
+    for(s in 1:n_simulations){
+      temp[s, 13:16] = config$simulation[[s]]$coefficients
+    }
+    
+  }
+  
   #save to df
   data = rbind(data, temp)
 }
 
+
 colnames(data) = columns
+
+write.csv(data,"results.csv", row.names = FALSE)
