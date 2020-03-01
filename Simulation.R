@@ -101,9 +101,9 @@ gen_data <- function(n_obs, x_cov, mcar = 0, mar = 0, mnar = 0, outliers = 0, n_
   xy = lapply(xy, matrix, ncol=n_col)
 }
 
-#####
+######
 
-analyze <- function(x_cov, n_obs=100, n_simulations=100, mcar=0, mar=0, mnar=0, outliers=0, DDC=TRUE, m = 10, R=1000, k=5){
+simulate <- function(x_cov, n_obs=100, n_simulations=100, mcar=0, mar=0, mnar=0, outliers=0, DDC=TRUE, m = 10, R=1000, k=5){
   #generate data
   data = gen_data(n_obs = n_obs, x_cov, mcar = mcar, mar=mar, mnar=mnar, outliers=outliers, n_sets=n_simulations)
   
@@ -173,22 +173,60 @@ analyze <- function(x_cov, n_obs=100, n_simulations=100, mcar=0, mar=0, mnar=0, 
 set.seed(123)
 x_cov = gen_x_cov(n_x=3, max_cov=0.5)
 
-# #config1 10% for each, each iter
-# c1 = diag(3) *0.1
-# 
-# #config2 40% for each, each iter
-# c2 = diag(3) *0.4
-# 
-# #combine configs
-# config = rbind(c1, c2)
-# colnames(config) = c("MCAR", "MAR", "MNAR")
-# 
-# 
-# for(i=1:nrow(config)) {
-#   print(i)
-# }
-# 
+#config1 10% for each, each iter
+c1 = diag(3) *0.1
+
+#config2 40% for each, each iter
+c2 = diag(3) *0.4
+
+#combine configs
+config = rbind(c1, c2)
+colnames(config) = c("MCAR", "MAR", "MNAR")
+
+results = list()
+
+for(i in 1:1) {
+  R = 3
+  n_obs=50
+  n_simulations=2
+  outliers=0.2
+  k=5
+  
+  
+  #determine m
+  m = config[i,1] + config[i,2] + config[i,3]
+  m = round(m*100)
+
+  #run simulation
+  simulation = simulate(x_cov, 
+                        n_obs=n_obs,
+                        n_simulations=n_simulations,
+                        mcar=config[i,1],
+                        mar=config[i,2],
+                        mnar=config[i,3],
+                        outliers=outliers,
+                        DDC=TRUE,
+                        m = m,
+                        R=R,
+                        k=k)
+  
+  results[[i]] = list(
+    n_obs=n_obs,
+    n_simulations=n_simulations,
+    mcar=config[i,1],
+    mar=config[i,2],
+    mnar=config[i,3],
+    outliers=outliers,
+    DDC=TRUE,
+    m = m,
+    R=R,
+    k=k,
+    x_cov=x_cov,
+    simulation = simulation
+  )
+}
 
 
-a = analyze(x_cov, n_obs=100, n_simulations=3, mcar = 0.1, R=3, DDC=TRUE)
-print(a)
+
+# a = analyze(x_cov, n_obs=100, n_simulations=3, mcar = 0.1, R=3, DDC=TRUE)
+# print(a)
