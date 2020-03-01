@@ -183,29 +183,32 @@ c2 = diag(3) *0.4
 config = rbind(c1, c2)
 colnames(config) = c("MCAR", "MAR", "MNAR")
 
-results = list()
+#results = list()
 
-for(i in 1:nrow(config)) {
+for(i in 7:(6+nrow(config))) {
   R = 1000
   n_obs=200
   n_simulations=100
-  outliers=0.2
+  outliers=0
   k=5
+  DDC = FALSE
   
+  ci = i - 6 #correcetion for config files append
   
+  print(ci)
   #determine m
-  m = config[i,1] + config[i,2] + config[i,3]
+  m = config[ci,1] + config[ci,2] + config[ci,3]
   m = round(m*100)
 
   #run simulation
   simulation = simulate(x_cov, 
                         n_obs=n_obs,
                         n_simulations=n_simulations,
-                        mcar=config[i,1],
-                        mar=config[i,2],
-                        mnar=config[i,3],
+                        mcar=config[ci,1],
+                        mar=config[ci,2],
+                        mnar=config[ci,3],
                         outliers=outliers,
-                        DDC=TRUE,
+                        DDC=DDC,
                         m = m,
                         R=R,
                         k=k)
@@ -214,11 +217,11 @@ for(i in 1:nrow(config)) {
   results[[i]] = list(
     n_obs=n_obs,
     n_simulations=n_simulations,
-    mcar=config[i,1],
-    mar=config[i,2],
-    mnar=config[i,3],
+    mcar=config[ci,1],
+    mar=config[ci,2],
+    mnar=config[ci,3],
     outliers=outliers,
-    DDC=TRUE,
+    DDC=DDC,
     m = m,
     R=R,
     k=k,
@@ -227,5 +230,5 @@ for(i in 1:nrow(config)) {
   )
   
   #store to disk after each iteration
-  save(results, file = paste(c("results after ", i, ".RData"), collapse = ""))
+  save(results, file = paste(c("results no outliers after ", i, ".RData"), collapse = ""))
 }
