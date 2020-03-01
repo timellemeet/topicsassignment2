@@ -185,10 +185,10 @@ colnames(config) = c("MCAR", "MAR", "MNAR")
 
 results = list()
 
-for(i in 1:2) {
-  R = 3
-  n_obs=50
-  n_simulations=2
+for(i in 1:nrow(config)) {
+  R = 1000
+  n_obs=200
+  n_simulations=100
   outliers=0.2
   k=5
   
