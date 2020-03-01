@@ -110,8 +110,6 @@ fit <- function(xyList, ...) {
     models = models,
     m=m,
     lmrob=list(...)))
-  
-  
 }
 
 
@@ -129,7 +127,24 @@ fit <- function(xyList, ...) {
 # p-value in the fifth column (see slide 50 of Lecture 5 for an example)
 
 pool <- function(fitList, ...) {
-
+  #construct result matrix
+  m = length(fitList)
+  row_names = names(fitList[[1]]$coefficients)
+  n_coeff = length(row_names)
+  summary = matrix(0L, nrow = n_coeff, ncol=5)
+  rownames(summary) = row_names
+  colnames(summary) = c("Estimate", "Std. Error", "t value", "df", "Pr(>|t|)")
+  print(m)
+  
+  #retrieve information from models
+  pooled_estimate = lapply(fitList, function(x) x$coefficients)
+  pooled_estimate = matrix(unlist(pooled_estimate), ncol = n_coeff, byrow = TRUE)
+  pooled_estimate = colMeans(pooled_estimate)
+  summary[,1] = pooled_estimate
+  
+  print
+  coeff = NULL
+  return(summary)
 }
 
 
@@ -168,22 +183,19 @@ bootstrap <- function(x, R, k, DDC = FALSE, ...) {
 
 source("Simulation.R")
 set.seed(123)
-m = 50
 x_cov = gen_x_cov(n_x=3, max_cov=0.5)
-xy = gen_data(n_obs = 500, x_cov, mcar = 0.1, mar=0, mnar=0, outliers=0, n_sets=m)
-xy = xy[[1]]
+xy = gen_data(n_obs = 20, x_cov, mcar = 0.01, mar=0, mnar=0, outliers=0, n_sets=1)[[1]]
 
-start_time1 <- Sys.time()
-mi = multimp(xy,m=50, imp_var = FALSE, DDC=FALSE)
-end_time1 <- Sys.time()
 
-start_time2 <- Sys.time()
+mi = multimp(xy,m=3, imp_var = FALSE, DDC=FALSE)
 fit = fit(mi$imputed)
-end_time2 <- Sys.time()
+pool = pool(fit$models)
 
-print(fit)
-print(end_time1 - start_time1)
-print(end_time2 - start_time2)
+print(pool)
+# start_time2 <- Sys.time()
+# end_time2 <- Sys.time()
+# print(end_time1 - start_time1)
+# print(end_time2 - start_time2)
 
 # Time difference of 3.909026 secs
 # Time difference of 2.586185 secs
