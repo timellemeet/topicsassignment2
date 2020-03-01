@@ -80,14 +80,14 @@ gen_data <- function(n_obs, x_cov, mcar = 0, mar = 0, mnar = 0, outliers = 0, n_
   #check if parameters valid
   if((mcar + mar + mnar + outliers)>1) warning('Cannot contaminate more than complete data')
   
+  n_col = 1+ncol(x_cov)
+  
   #generate all data points
   y = rmvnorm(n_obs * n_sets, sigma = diag(y_cov))
   x = rmvnorm(n_obs * n_sets, sigma = x_cov)
   xy = cbind(x,y)
   
-  
   #Alter data
-  n_col = 1+length(diag(x_cov))
   total_cells = n_obs * n_col
   xy = gen_mcar(xy, round(total_cells*mcar))
   xy = gen_mar(xy, round(total_cells*mar))
@@ -100,13 +100,20 @@ gen_data <- function(n_obs, x_cov, mcar = 0, mar = 0, mnar = 0, outliers = 0, n_
 }
 
 #set.seed(123)
-#m = 100
-#x_cov = gen_x_cov(n_x=3, max_cov=0.5)
-#data = gen_data(n_obs = 200, x_cov, mcar =0., mar=0.2, mnar=0.2, outliers=0.2, n_sets=m)
+# x_cov = gen_x_cov(n_x=2, max_cov=0.5)
+# data = gen_data(n_obs = 3, x_cov, mcar =0., mar=0.2, mnar=0.2, outliers=0.2, n_sets=2)
+# print(data)
 
 
+#name y variable
+#colnames(xy)[n_col] = "y"
+
+
+#mi
 #noise 
 #noise.factor
 #force
 #init method median
 
+#fit
+#setting = "KS2014"

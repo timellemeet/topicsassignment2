@@ -18,6 +18,7 @@
 
 library("VIM")
 library("cellWise")  
+library("robustbase")
 library("doParallel")  
 no_cores <- detectCores() - 1  
 
@@ -58,26 +59,16 @@ multimp <- function(xy, m = 20, DDC = FALSE, ...) {
     xy[outliers] = NA
   }
   
-  imputed = xy
-  
   #filter out full nan rows
   n_col = ncol(xy)
   xy = xy[apply(xy, 1, function(x) !all(is.na(x)))]
   xy = matrix(xy, ncol = n_col)
 
-  #define cluster for parrel imputation
-  cl <- makeCluster(no_cores)
-  registerDoParallel(cl)
-
-
   #generate m imputed datasets
-  imputed <- foreach(i = 1:m, .packages='VIM') %dopar% {
+  imputed <- foreach(i = 1:m, .packages='VIM') %do% {
     #irmi options are set in simulation study for flexiblity!
     return(irmi(xy,...))
   }
-
-  # free up processes
-  stopCluster(cl)
 
   return(list(
     imputed = imputed,
@@ -104,6 +95,23 @@ multimp <- function(xy, m = 20, DDC = FALSE, ...) {
 
 fit <- function(xyList, ...) {
   # You can use function lmrob() from package robustbase for the MM-estimator.
+  
+  m = length(xyList)
+
+  #estimate all models
+  models <- foreach(i = 1:m, .packages='robustbase') %do% {
+    xy = xyList[[i]]
+    X = as.matrix(xy[,-ncol(xy)])
+    y = xy[,ncol(xy)]
+    return(lmrob(y ~ X, ...))
+  }
+
+  return(list(
+    models = models,
+    m=m,
+    lmrob=list(...)))
+  
+  
 }
 
 
@@ -160,13 +168,22 @@ bootstrap <- function(x, R, k, DDC = FALSE, ...) {
 
 source("Simulation.R")
 set.seed(123)
-m = 1
+m = 50
 x_cov = gen_x_cov(n_x=3, max_cov=0.5)
-xy = gen_data(n_obs = 10, x_cov, mcar =0, mar=0, mnar=0, outliers=0.2, n_sets=m)
+xy = gen_data(n_obs = 500, x_cov, mcar = 0.1, mar=0, mnar=0, outliers=0, n_sets=m)
 xy = xy[[1]]
-start_time <- Sys.time()
-mi = multimp(xy,m=2, imp_var = FALSE, DDC=TRUE)
-end_time <- Sys.time()
-print(mi)
-print(end_time - start_time)
 
+start_time1 <- Sys.time()
+mi = multimp(xy,m=50, imp_var = FALSE, DDC=FALSE)
+end_time1 <- Sys.time()
+
+start_time2 <- Sys.time()
+fit = fit(mi$imputed)
+end_time2 <- Sys.time()
+
+print(fit)
+print(end_time1 - start_time1)
+print(end_time2 - start_time2)
+
+# Time difference of 3.909026 secs
+# Time difference of 2.586185 secs
