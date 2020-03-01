@@ -271,3 +271,4 @@ bootstrap <- function(x, R=100, k=5, DDC = FALSE, ...) {
     summary=summary
   ))
 }
+

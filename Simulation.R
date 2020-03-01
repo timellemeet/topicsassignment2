@@ -109,11 +109,11 @@ analyze <- function(x_cov, n_obs=100, n_simulations=100, mcar=0, mar=0, mnar=0, 
   
   
   #define cluster for parallel imputation	
-  cl <- makeCluster(no_cores)	
-  registerDoParallel(cl)
+  # cl <- makeCluster(no_cores)	
+  # registerDoParallel(cl)
   
   #perform simulations
-  simulations <- foreach(i = 1:n_simulations, .packages=c("VIM", "robustbase")) %dopar% {
+  simulations <- foreach(i = 1:n_simulations, .packages=c("VIM", "robustbase")) %do% {
     #load packages in each process
     source("Imputation.R")
     
@@ -121,45 +121,53 @@ analyze <- function(x_cov, n_obs=100, n_simulations=100, mcar=0, mar=0, mnar=0, 
     xy = data[[i]]
     
     #perform methods
-    mi = multimp(xy, m = m, DDC = FALSE)
+    mi = multimp(xy, m = m, DDC = FALSE, imp_var = FALSE)
     mi_fit = fit(mi$imputed)
     mi_pool = pool(mi_fit$models)
-    boot = bootstrap(xy, R=R, k=k, DDC = FALSE)
+    boot = bootstrap(xy, R=R, k=k, DDC = FALSE)$summary
     
     #also do DDC is asked
     if(DDC){
-      ddc_mi = multimp(xy, m = m, DDC = FALSE)
+      ddc_mi = multimp(xy, m = m, DDC = FALSE, imp_var = FALSE)
       ddc_mi_fit = fit(ddc_mi$imputed)
       ddc_mi_pool = pool(ddc_mi_fit$models)
-      ddc_boot = bootstrap(x, R=R, k=k, DDC = FALSE) 
-      
-      
+      ddc_boot = bootstrap(xy, R=R, k=k, DDC = FALSE)$summary
       
     } else {
-          mi_ddc = NA
-          boot_ddc = NA
+      ddc_mi = NA
+      ddc_boot = NA
     }
     
     #return list of results
     return(list(
       mi = mi_pool,
-      mi_ddc = ddc_mi,
+      mi_ddc = ddc_mi_pool,
       boot = boot,
       boot_ddc = ddc_boot
     ))
   }
   
   # free up processes	
-  stopCluster(cl)
+  # stopCluster(cl)
   
   
   #return
   return(simulations)
 }
 
+
+# set.seed(123)
+# x_cov = gen_x_cov(n_x=3, max_cov=0.5)
+# xy = gen_data(n_obs = 200, x_cov, mcar = 0.1, mar=0, mnar=0, outliers=0, n_sets=1)[[1]]
+# 
+# mi = multimp(xy,m=10, imp_var = FALSE, DDC=FALSE)
+# fit = fit(mi$imputed)
+# pool = pool(fit$models)
+# print(pool)
+
 ######experimental design
 set.seed(123)
-x_cov = gen_x_cov(n_x=2, max_cov=0.5)
+x_cov = gen_x_cov(n_x=3, max_cov=0.5)
 
-a = analyze(x_cov, n_obs=100, n_simulations=1, mar=0.2, outliers=0.2, DDC=FALSE, m = 5, R=10)
+a = analyze(x_cov, n_obs=200, n_simulations=1, mcar = 0.1, R=3)
 print(a)
