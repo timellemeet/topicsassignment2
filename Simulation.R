@@ -185,7 +185,7 @@ colnames(config) = c("MCAR", "MAR", "MNAR")
 
 results = list()
 
-for(i in 1:1) {
+for(i in 1:2) {
   R = 3
   n_obs=50
   n_simulations=2
@@ -210,6 +210,7 @@ for(i in 1:1) {
                         R=R,
                         k=k)
   
+  #save with all information
   results[[i]] = list(
     n_obs=n_obs,
     n_simulations=n_simulations,
@@ -224,9 +225,7 @@ for(i in 1:1) {
     x_cov=x_cov,
     simulation = simulation
   )
+  
+  #store to disk after each iteration
+  save(results, file = paste(c("results after ", i, ".RData"), collapse = ""))
 }
-
-
-
-# a = analyze(x_cov, n_obs=100, n_simulations=3, mcar = 0.1, R=3, DDC=TRUE)
-# print(a)
