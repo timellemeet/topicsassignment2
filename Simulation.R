@@ -9,9 +9,11 @@
 library("mvtnorm")
 library("clusterGeneration")
 library("sigmoid")
+library("doParallel") #for parallel
+no_cores <- detectCores() - 1  
 
 # Load R script with your implementation of the methods
-#source("Imputation.R")
+source("Imputation.R")
 
 
 # Put the code for your simulations below here
@@ -99,21 +101,65 @@ gen_data <- function(n_obs, x_cov, mcar = 0, mar = 0, mnar = 0, outliers = 0, n_
   xy = lapply(xy, matrix, ncol=n_col)
 }
 
-#set.seed(123)
-# x_cov = gen_x_cov(n_x=2, max_cov=0.5)
-# data = gen_data(n_obs = 3, x_cov, mcar =0., mar=0.2, mnar=0.2, outliers=0.2, n_sets=2)
-# print(data)
+#####
 
+analyze <- function(x_cov, n_obs=100, n_simulations=100, mcar=0, mar=0, mnar=0, outliers=0, DDC=TRUE, m = 10, R=1000, k=5){
+  #generate data
+  data = gen_data(n_obs = n_obs, x_cov, mcar = mcar, mar=mar, mnar=mnar, outliers=outliers, n_sets=n_simulations)
+  
+  
+  #define cluster for parallel imputation	
+  cl <- makeCluster(no_cores)	
+  registerDoParallel(cl)
+  
+  #perform simulations
+  simulations <- foreach(i = 1:n_simulations, .packages=c("VIM", "robustbase")) %dopar% {
+    #load packages in each process
+    source("Imputation.R")
+    
+    #select the data
+    xy = data[[i]]
+    
+    #perform methods
+    mi = multimp(xy, m = m, DDC = FALSE)
+    mi_fit = fit(mi$imputed)
+    mi_pool = pool(mi_fit$models)
+    boot = bootstrap(xy, R=R, k=k, DDC = FALSE)
+    
+    #also do DDC is asked
+    if(DDC){
+      ddc_mi = multimp(xy, m = m, DDC = FALSE)
+      ddc_mi_fit = fit(ddc_mi$imputed)
+      ddc_mi_pool = pool(ddc_mi_fit$models)
+      ddc_boot = bootstrap(x, R=R, k=k, DDC = FALSE) 
+      
+      
+      
+    } else {
+          mi_ddc = NA
+          boot_ddc = NA
+    }
+    
+    #return list of results
+    return(list(
+      mi = mi_pool,
+      mi_ddc = ddc_mi,
+      boot = boot,
+      boot_ddc = ddc_boot
+    ))
+  }
+  
+  # free up processes	
+  stopCluster(cl)
+  
+  
+  #return
+  return(simulations)
+}
 
-#name y variable
-#colnames(xy)[n_col] = "y"
+######experimental design
+set.seed(123)
+x_cov = gen_x_cov(n_x=2, max_cov=0.5)
 
-
-#mi
-#noise 
-#noise.factor
-#force
-#init method median
-
-#fit
-#setting = "KS2014"
+a = analyze(x_cov, n_obs=100, n_simulations=1, mar=0.2, outliers=0.2, DDC=FALSE, m = 5, R=10)
+print(a)

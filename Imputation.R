@@ -63,13 +63,13 @@ multimp <- function(xy, m = 20, DDC = FALSE, ...) {
   n_col = ncol(xy)
   xy = xy[apply(xy, 1, function(x) !all(is.na(x)))]
   xy = matrix(xy, ncol = n_col)
-
+  
   #generate m imputed datasets
   imputed <- foreach(i = 1:m, .packages='VIM') %do% {
     #irmi options are set in simulation study for flexiblity!
     return(irmi(xy,...))
   }
-
+  
   return(list(
     imputed = imputed,
     m=m,
@@ -217,13 +217,13 @@ bootstrap <- function(x, R=100, k=5, DDC = FALSE, ...) {
   cl <- makeCluster(no_cores)	
   registerDoParallel(cl)
   
-  #perform bootstrap #######
-  replicates <- foreach(i = 1:R, .packages=c("VIM", "robustbase")) %do% {	
+  #perform bootstrap
+  replicates <- foreach(i = 1:R, .packages=c("VIM", "robustbase")) %dopar% {	
 	  #selection observations for iteration
     selection = sample(x=nrow(x), size=nrow(x), replace = TRUE)
 	  data = x[selection,]
 	  
-	  #impute nans
+    #impute nans
 	  data = kNN(as.data.frame(data), k=k, imp_var=FALSE)
 	  
 	  #estimate model
@@ -246,8 +246,7 @@ bootstrap <- function(x, R=100, k=5, DDC = FALSE, ...) {
   summary = matrix(0L, nrow = length(varnames), ncol=4)
   rownames(summary) = varnames
   colnames(summary) = c("Estimate", "Std. Error", "z value", "Pr(>|z|)")
-  
-  print(replicates)
+
   
   #point estimates
   beta_estimates = colMeans(replicates)
@@ -258,7 +257,6 @@ bootstrap <- function(x, R=100, k=5, DDC = FALSE, ...) {
   se = colSums(se) / (R-1) # 1/R-1 sum (T - mean(T))^2
   se = sqrt(se)
   summary[,2] = se
-  print(se)
   
   #z-statistics
   zstats = beta_estimates / se #true beta is 0
@@ -273,32 +271,3 @@ bootstrap <- function(x, R=100, k=5, DDC = FALSE, ...) {
     summary=summary
   ))
 }
-
-
-source("Simulation.R")
-set.seed(123)
-x_cov = gen_x_cov(n_x=3, max_cov=0.5)
-xy = gen_data(n_obs = 200, x_cov, mcar = 0.1, mar=0, mnar=0, outliers=0, n_sets=1)[[1]]
-
-# 1.249644 mins
-# mi = multimp(xy,m=10, imp_var = FALSE, DDC=FALSE)
-# fit = fit(mi$imputed)
-# pool = pool(fit$models)
-
-#print(xy)
-
-start_time <- Sys.time()
-boot = bootstrap(xy, R=5, k=5, DDC = FALSE)
-end_time <- Sys.time()
-print(boot$summary)
-print(end_time - start_time)
-
-
-
-# start_time2 <- Sys.time()
-# end_time2 <- Sys.time()
-# print(end_time1 - start_time1)
-# print(end_time2 - start_time2)
-
-# Time difference of 3.909026 secs
-# Time difference of 2.586185 secs
