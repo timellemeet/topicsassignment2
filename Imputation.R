@@ -261,14 +261,17 @@ bootstrap <- function(x, R=100, k=5, DDC = FALSE, ...) {
   print(se)
   
   #z-statistics
+  zstats = beta_estimates / se #true beta is 0
+  summary[,3] = zstats
   
   #p-values
+  pvalues = dnorm(zstats)
+  summary[,4] = pvalues
   
   return(list(
     replicates=replicates,
     summary=summary
   ))
-
 }
 
 
