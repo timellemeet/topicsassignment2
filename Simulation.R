@@ -109,11 +109,13 @@ analyze <- function(x_cov, n_obs=100, n_simulations=100, mcar=0, mar=0, mnar=0, 
   
   
   #define cluster for parallel imputation	
-  # cl <- makeCluster(no_cores)	
-  # registerDoParallel(cl)
+  cl <- makeCluster(no_cores)
+  registerDoParallel(cl)
+  
+  start_time <- Sys.time()
   
   #perform simulations
-  simulations <- foreach(i = 1:n_simulations, .packages=c("VIM", "robustbase")) %do% {
+  simulations <- foreach(i = 1:n_simulations, .packages=c("VIM", "robustbase")) %dopar% {
     #load packages in each process
     source("Imputation.R")
     
@@ -121,20 +123,20 @@ analyze <- function(x_cov, n_obs=100, n_simulations=100, mcar=0, mar=0, mnar=0, 
     xy = data[[i]]
     
     #perform methods
-    mi = multimp(xy, m = m, DDC = FALSE, imp_var = FALSE)
-    mi_fit = fit(mi$imputed)
+    mi = multimp(xy, m = m, DDC = FALSE, imp_var = FALSE, robust = TRUE)
+    mi_fit = fit(mi$imputed,  setting = "KS2014", robust=TRUE)
     mi_pool = pool(mi_fit$models)
-    boot = bootstrap(xy, R=R, k=k, DDC = FALSE)$summary
+    boot = bootstrap(xy, R=R, k=k, DDC = FALSE,  setting = "KS2014", robust=TRUE)$summary
     
     #also do DDC is asked
     if(DDC){
-      ddc_mi = multimp(xy, m = m, DDC = FALSE, imp_var = FALSE)
-      ddc_mi_fit = fit(ddc_mi$imputed)
+      ddc_mi = multimp(xy, m = m, DDC = FALSE, imp_var = FALSE, robust = TRUE)
+      ddc_mi_fit = fit(ddc_mi$imputed,  setting = "KS2014", robust=TRUE)
       ddc_mi_pool = pool(ddc_mi_fit$models)
-      ddc_boot = bootstrap(xy, R=R, k=k, DDC = FALSE)$summary
+      ddc_boot = bootstrap(xy, R=R, k=k, DDC = FALSE,  setting = "KS2014", robust=TRUE)$summary
       
     } else {
-      ddc_mi = NA
+      ddc_mi_pool = NA
       ddc_boot = NA
     }
     
@@ -147,8 +149,10 @@ analyze <- function(x_cov, n_obs=100, n_simulations=100, mcar=0, mar=0, mnar=0, 
     ))
   }
   
+  print(Sys.time()-start_time)
+  
   # free up processes	
-  # stopCluster(cl)
+  stopCluster(cl)
   
   
   #return
@@ -169,5 +173,22 @@ analyze <- function(x_cov, n_obs=100, n_simulations=100, mcar=0, mar=0, mnar=0, 
 set.seed(123)
 x_cov = gen_x_cov(n_x=3, max_cov=0.5)
 
-a = analyze(x_cov, n_obs=200, n_simulations=1, mcar = 0.1, R=3)
+# #config1 10% for each, each iter
+# c1 = diag(3) *0.1
+# 
+# #config2 40% for each, each iter
+# c2 = diag(3) *0.4
+# 
+# #combine configs
+# config = rbind(c1, c2)
+# colnames(config) = c("MCAR", "MAR", "MNAR")
+# 
+# 
+# for(i=1:nrow(config)) {
+#   print(i)
+# }
+# 
+
+
+a = analyze(x_cov, n_obs=100, n_simulations=3, mcar = 0.1, R=3, DDC=TRUE)
 print(a)
