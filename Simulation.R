@@ -183,9 +183,9 @@ c2 = diag(3) *0.4
 config = rbind(c1, c2)
 colnames(config) = c("MCAR", "MAR", "MNAR")
 
-#results = list()
+results = list()
 
-for(i in 7:(6+nrow(config))) {
+for(i in 1:nrow(config)) {
   R = 1000
   n_obs=200
   n_simulations=100
@@ -193,9 +193,9 @@ for(i in 7:(6+nrow(config))) {
   k=5
   DDC = FALSE
   
-  ci = i - 6 #correcetion for config files append
+  ci = i # - 6 #correcetion for config files append
   
-  print(ci)
+
   #determine m
   m = config[ci,1] + config[ci,2] + config[ci,3]
   m = round(m*100)
@@ -232,3 +232,30 @@ for(i in 7:(6+nrow(config))) {
   #store to disk after each iteration
   save(results, file = paste(c("results no outliers after ", i, ".RData"), collapse = ""))
 }
+
+
+####### Determining baseline results
+
+n_obs=200
+n_simulations=100
+
+clean_data = gen_data(n_obs = 200, x_cov, mcar = 0, mar=0, mnar=0, outliers=0, n_sets=n_simulations)
+base = fit(clean_data,  setting = "KS2014", robust=TRUE)
+
+results[[13]] = list(
+  n_obs=n_obs,
+  n_simulations=n_simulations,
+  mcar=0,
+  mar=0,
+  mnar=0,
+  outliers=0,
+  DDC=FALSE,
+  m = 0,
+  R=0,
+  k=0,
+  x_cov=x_cov,
+  simulation = base$models
+)
+
+#store to disk after each iteration
+save(results, file = "full results.RData")
